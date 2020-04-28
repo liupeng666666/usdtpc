@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.WebIM.Dao.SubGroupDao">
+    <select id="SubGroup" resultType="map">
+        select b.* from (select * from sub_friend where sub_user_id=#{userid}) as a INNER JOIN sub_group as b on
+        a.userid=b.pid where b.isdel=0
+    </select>
+    <select id="SubGroupTop" resultType="map">
+        select * from sub_group
+        <where>
+            and isdel=0
+            <if test="state!=null and state!=''">
+                and state=#{state}
+            </if>
+            <if test="top!=null and top!=''">
+                and top=#{top}
+            </if>
+        </where>
+    </select>
+    <update id="SubGroupUpdate">
+        update sub_group set num=(select count(0) from sub_friend where userid=#{pid}) where pid=#{pid}
+    </update>
+    <select id="getGroupByUser" resultType="HashMap">
+        SELECT sg.* FROM sub_group sg
+        INNER JOIN sub_friend sf ON sf.userid = sg.pid
+        WHERE sf.sub_user_id=#{userid} AND sg.isdel=0 AND sg.state=0 AND sg.audit=1 GROUP BY sg.pid
+    </select>
+    <select id="getGroupUserInfo" resultType="HashMap">
+        SELECT su.nickname AS nickname , su.img AS img,su.pid AS userid FROM sub_group sg
+        LEFT JOIN sub_friend sf ON sf.userid = sg.pid
+        LEFT JOIN sub_user su ON sf.sub_user_id = su.pid
+        WHERE sg.pid=#{groupid} GROUP BY su.pid ORDER BY sf.datetime ASC
+    </select>
+    <insert id="addGroupInfo">
+        INSERT INTO sub_group(pid,img,`name`,userid,num,isdel,state,top,createtime,expire)
+        VALUES(#{pid},#{img},#{name},#{userid},1,0,0,0,now(),#{expire})
+    </insert>
+    <insert id="addFriendRelation">
+        INSERT INTO sub_friend (pid,userid,sub_user_id)VALUES (#{uuid},#{pid},#{userid})
+    </insert>
+    <insert id="inviteFriends">
+        INSERT INTO sub_friend (pid,userid,sub_user_id)VALUES (#{uuid},#{roomid},#{sub_user_id})
+    </insert>
+    <select id="getGroupById" resultType="HashMap">
+        SELECT sg.img AS groupimg,sg.pid AS groupid,sg.name AS groupname,sg.intro AS groupintro,sg.num as
+        groupnum,sg.money AS money,sg.userid AS owner,su.nickname AS nickname , su.img AS userimg FROM sub_group sg
+        LEFT JOIN sub_user su ON su.pid = sg.userid
+        WHERE sg.pid =#{groupid}
+    </select>
+    <update id="groupNumAdd">
+        UPDATE sub_group set num = num+1 where pid = #{pid}
+
+    </update>
+    <update id="changeGroupInfo">
+        UPDATE sub_group AS sg
+        <set>
+            <if test="img !=null and img!=''">
+                sg.img = #{img},
+            </if>
+            <if test="name !=null and name!=''">
+                sg.name = #{name},
+            </if>
+            <if test="money !=null and money!=''">
+                sg.money = #{money},
+            </if>
+            <if test="intro!=null and intro!=''">
+                sg.intro = #{intro},
+            </if>
+            <if test="expire!=null and expire!=''">
+                sg.expire = #{expire},
+            </if>
+            <if test="memo!=null and memo!=''">
+                sg.memo = #{memo},
+            </if>
+        </set>
+        WHERE sg.pid = #{groupid}
+    </update>
+</mapper>

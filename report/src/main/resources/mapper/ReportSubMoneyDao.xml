@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.report.Dao.ReportSubMoneyDao">
+    <select id="SubMoneySelect" resultType="map">
+        select * from (select pid,referee_num,team_num from sub_user where pid=#{pid}) as a INNER JOIN
+        (select pid,team_level_money,team_money,extract_money,bur_money,water_money from sub_money where pid=#{pid}) as
+        b on a.pid=b.pid
+        left JOIN (select IFNULL(sum(money),0) as bru_dj,sub_user_id from sub_usdt where style=2 and examine=0 and
+        type=0 and codeid=695 and sub_user_id=#{pid}) as c on c.sub_user_id=a.pid
+    </select>
+
+    <update id="SubMoneyUpdate">
+        update sub_money
+        <set>
+            <if test="team_money!=null and team_money!=''">
+                team_money=team_money-#{team_money},
+            </if>
+            <if test="surplus!=null and surplus!=''">
+                surplus=surplus+#{surplus},
+            </if>
+            <if test="bur_money!=null and bur_money!=''">
+                bur_money=bur_money+#{bur_money},
+            </if>
+        </set>
+        where pid=#{userid}
+    </update>
+    <select id="SubMoneyTeam" resultType="map">
+        select * from sub_money where pid=#{userid}
+    </select>
+</mapper>

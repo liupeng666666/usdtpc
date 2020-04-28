@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.report.Dao.ReportSubTeamMoneyDao">
+
+    <insert id="SubTeamMoneyInsert">
+        INSERT INTO `sub_team_money` (
+        `pid`,
+        `userid`,
+        `money`,
+        `d_money`,
+        `type`,
+        `createtime`
+        )
+        VALUES
+        (
+        uuid(),
+        #{userid},
+        #{money},
+        #{d_money},
+        #{type},
+        now()
+        );
+    </insert>
+
+    <select id="SubTeamMoneySelect" resultType="map">
+        select DATE_FORMAT( a.createtime,'%Y-%m-%d %H:%i:%s') AS createtime,DATE_FORMAT( a.createtime,'%Y-%m-%d') AS
+        `date`,DATE_FORMAT( a.createtime,'%H:%i:%s') AS time,a.*,b.name as 'trans_name' from sub_team_money as a INNER
+        JOIN sys_trans as b on a.type=b.type where userid=#{userid} ORDER BY createtime desc limit #{page},#{num}
+    </select>
+    <select id="SubTeamMoneyCount" resultType="int">
+        select count(0) from sub_team_money as a INNER JOIN sys_trans as b on a.type=b.type where userid=#{userid}
+    </select>
+</mapper>

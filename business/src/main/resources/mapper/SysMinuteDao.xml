@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.business.Dao.SysMinuteDao">
+    <select id="SysMinuteSelect" resultType="map">
+        select * from sys_minute where isdel=0
+        <if test="pid!=null and pid!=''">
+            and pid=#{pid}
+        </if>
+        <if test="state!=null and state!=''">
+            and state=#{state}
+        </if>
+        <if test="style!=null and style!=''">
+            and style=#{style}
+        </if>
+        order by minute asc
+    </select>
+</mapper>

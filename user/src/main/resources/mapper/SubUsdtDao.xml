@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubUsdtDao">
+    <!--获取系统钱包记录-->
+    <select id="getSysWallet" resultType="HashMap">
+        SELECT pid,wallet FROM sys_wallet
+    </select>
+    <!--添加一条新的usdt记录-->
+    <insert id="addSubUsdt">
+        INSERT INTO sub_usdt(pid,style,isdel,createtime,sub_wallet_id,sys_wallet_id,examine,money,sub_user_id,
+        <if test="codeid!=null and codeid!=''">
+            codeid,
+        </if>
+        trade)
+        VALUES(#{pid},#{style},0,now(),#{sub_wallet_id},#{sys_wallet_id},0,#{money},#{userid},
+        <if test="codeid!=null and codeid!=''">
+            #{codeid},
+        </if>
+        #{trade})
+    </insert>
+    <insert id="addSubUsdtPass">
+        INSERT INTO sub_usdt(pid,style,isdel,createtime,sub_wallet_id,sys_wallet_id,examine,money,sub_user_id,
+        <if test="codeid!=null and codeid!=''">
+            codeid,
+        </if>
+        trade)
+        VALUES(#{pid},#{style},0,now(),#{sub_wallet_id},#{sys_wallet_id},1,#{money},#{sub_user_id},
+        <if test="codeid!=null and codeid!=''">
+            #{codeid},
+        </if>
+        #{trade})
+    </insert>
+    <!--根据用户id和动作查询USDT记录-->
+    <select id="getSubUsdtByIdStyle" resultType="HashMap">
+        SELECT LPAD(su.usdtid,10,0) AS usdtid,pid,style,DATE_FORMAT(su.createtime,'%Y-%m-%d %H:%i:%s') AS
+        usdttime,examine,reason,money,trade,sub_wallet_id,zr_wallet FROM sub_usdt su
+        WHERE isdel = 0 AND sub_user_id =#{userid} AND style = #{style}
+        and codeid=#{codeid} and `type`=0
+        ORDER BY usdttime DESC
+        <if test="beginnumber!=null   and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+    <select id="getFreezeUsdt" resultType="HashMap">
+        SELECT SUM(money)AS freeze,SUM(trade) as trade FROM sub_usdt WHERE examine = 0 AND isdel = 0 AND style =2 AND
+        sub_user_id = #{userid} and codeid=31 and type=0
+    </select>
+</mapper>

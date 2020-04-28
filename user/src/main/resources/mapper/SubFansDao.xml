@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubFansDao">
+    <!--添加新的粉丝-->
+    <insert id="addFans">
+        INSERT INTO sub_fans(pid,sub_user_id,fans_sub_user_id,createtime) VALUES (#{pid},#{sub_user_id},#{userid},now())
+    </insert>
+    <!--根据用户id查询用户粉丝-->
+    <select id="getFansByUserid" resultType="HashMap">
+        SELECT su.pid AS userid,su.nickname AS nickname,su.fans_num AS fans_num,su.follow_num AS follow_num,su.img AS
+        img FROM sub_fans sf
+        LEFT JOIN (select * from sub_user where state=0 and isdel=0) su ON sf.fans_sub_user_id = su.pid
+        WHERE sf.sub_user_id=#{userid};
+    </select>
+    <!--根据用户id查询用户关注-->
+    <select id="getConcernByUserid" resultType="HashMap">
+        SELECT su.fans_num AS fans_num,su.follow_num AS follow_num,su.referee_num AS referee_num,sg.type AS
+        startnum,su.pid AS userid,sm.income AS income,sm.surplus AS surplus,sm.loss AS loss,
+        sm.putinto AS putinto,sm.total AS total,sm.trade AS trade,sm.trade_income AS trade_income,su.nickname AS
+        nickname,su.fans_num AS fans_num,su.follow_num AS follow_num,su.img AS img FROM sub_fans sf
+        INNER JOIN (select * from sub_user where state=0 and isdel=0) su ON su.pid = sf.sub_user_id
+        INNER JOIN (select * from sub_money where state=0 and isdel=0) sm ON sm.pid = sf.sub_user_id
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE sf.fans_sub_user_id = #{userid}
+    </select>
+    <!--用户取消关注-->
+    <delete id="delFans">
+        DELETE FROM sub_fans WHERE sub_user_id = #{sub_user_id} and fans_sub_user_id =#{userid}
+    </delete>
+    <!--根据用户id查询用户关注-->
+    <select id="getFollowerTraderById" resultType="HashMap">
+        SELECT
+        su.fans_num AS fans_num,
+        su.follow_num AS follow_num,
+        su.referee_num AS referee_num,
+        sg.type AS startnum,
+        su.pid AS userid,
+        sm.income AS income,
+        sm.surplus AS surplus,
+        sm.loss AS loss,
+        sm.putinto AS putinto,
+        sm.total AS total,
+        sm.trade AS trade,
+        sm.trade_income AS trade_income,
+        su.nickname AS nickname,
+        su.fans_num AS fans_num,
+        su.follow_num AS follow_num,
+        su.img AS img,
+        sf.createtime AS createtime,
+        su.signature AS signature,
+        IFNULL(e.income,0) as 'e_income',
+        IFNULL(e.purchase,0) as 'purchase',
+        IFNULL(e.er,0) as 'er'
+        FROM
+        sub_fans sf
+        INNER JOIN (
+        SELECT
+        *
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) su ON su.pid = sf.sub_user_id
+        INNER JOIN (
+        SELECT
+        *
+        FROM
+        sub_money
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) sm ON sm.pid = sf.sub_user_id
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        LEFT JOIN (
+        SELECT
+        sum(income) AS 'income',
+        sum(purchase) AS 'purchase',
+        sum(income/purchase) as 'er',
+        userid
+        FROM
+        sub_order
+        WHERE
+        state = 0
+        AND style = 1
+        GROUP BY
+        userid
+        ) AS e ON e.userid = su.pid
+        WHERE
+        sf.fans_sub_user_id = #{userid}
+        AND su.trader = 1
+    </select>
+</mapper>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.business.Dao.BusSubMoneyDao">
+    <!--修改用户余额-->
+    <update id="SubMoneyUpdate">
+        UPDATE sub_money SET surplus = surplus-#{surplus} , putinto= putinto+#{surplus} where pid=#{userid}
+    </update>
+    <select id="SubMoneySelect" resultType="map">
+        select * from sub_money
+        <where>
+            and state=0 and isdel=0
+            <if test="userid!='' and userid!=null">
+                AND pid=#{userid}
+            </if>
+        </where>
+    </select>
+    <update id="SubMoneyTeamUpdate">
+        update sub_money set water_money=water_money+#{money} where pid=#{pid}
+    </update>
+
+    <select id="SubTeamSelect" resultType="map">
+        select a.* from (SELECT
+        *
+        FROM
+        sub_team
+        WHERE
+        sub_user_id = #{userid}
+        GROUP BY
+        userid) as a INNER JOIN sub_user as b on a.userid=b.pid INNER JOIN (select pid from sys_grade where isdel=0 and
+        `type`>2) as c on c.pid=b.sys_grade_id
+    </select>
+</mapper>

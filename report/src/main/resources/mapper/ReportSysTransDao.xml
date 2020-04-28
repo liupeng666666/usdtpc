@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.report.Dao.ReportSysTransDao">
+    <select id="SysTransSelect" resultType="map">
+        select * from sys_trans where `type`=#{type} and isdel=0 and state=0 limit 1
+    </select>
+    <select id="SysTrans" resultType="map">
+        select * from sys_trans where isdel=0 and state=0
+    </select>
+</mapper>

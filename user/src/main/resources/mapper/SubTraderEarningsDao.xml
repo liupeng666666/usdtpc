@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubTraderEarningsDao">
+    <!--根据时间周期查询交易员收益排行榜-->
+    <select id="getSubTraderEarningsTop" resultType="HashMap">
+        SELECT sg.type AS startnum,COUNT(so.follower)AS num,ste.sub_userid AS sub_userid,SUM(ste.earnings)AS earnings
+        ,su.nickname AS
+        nickname,su.img AS img FROM sub_trader_earnings ste
+        LEFT JOIN sub_user su ON su.pid = ste.sub_userid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        LEFT JOIN sub_order so ON so.follower = ste.sub_userid AND so.pid=ste.sub_orderid
+        WHERE su.trader = 1 AND su.isdel = 0 AND su.state = 0
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ and so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ and so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY ste.sub_userid ORDER BY earnings DESC
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            <![CDATA[ LIMIT #{beginnumber},#{endnumber}]]>
+        </if>
+    </select>
+    <select id="getSubTraderFollowerEarnings" resultType="HashMap">
+        SELECT ls.*,(ls.t_income+ls.c_income) AS 'income' FROM (
+        SELECT
+        <!--IFNULL(a.income, 0) AS 'income',-->
+        b.pid,
+        b.follow_num,
+        b.fans_num,
+        b.referee_num,
+        b.nickname,
+        b.img,
+        c.num,
+        IFNULL(d.income, 0) AS 't_income',
+        IFNULL(e.income, 0) AS 'c_income',
+        f.type
+        FROM
+        (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (2, 3)
+        <if test="begintime !=null and begintime != '' and endtime !=null and endtime != ''">
+            AND createtime BETWEEN #{begintime} and #{endtime}
+        </if>
+        GROUP BY
+        userid
+        ORDER BY
+        income DESC
+        ) AS a
+        INNER JOIN (
+        SELECT
+        *
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) AS b ON a.userid = b.pid
+        LEFT JOIN (
+        SELECT
+        count(0) AS 'num',
+        sub_user_id
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        GROUP BY
+        sub_user_id
+        ) AS c ON c.sub_user_id = a.userid
+        LEFT JOIN (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (2)
+        <if test="begintime !=null and begintime != '' and endtime !=null and endtime != ''">
+            AND createtime BETWEEN #{begintime} and #{endtime}
+        </if>
+        GROUP BY
+        userid
+        ) AS d ON d.userid = a.userid
+        LEFT JOIN (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (3)
+        <if test="begintime !=null and begintime != '' and endtime !=null and endtime != ''">
+            AND createtime BETWEEN #{begintime} and #{endtime}
+        </if>
+        GROUP BY
+        userid
+        ) AS e ON e.userid = a.userid
+        LEFT JOIN sys_grade as f on f.pid=b.sys_grade_id
+        <!--order by a.income desc-->
+        )AS ls
+        ORDER BY income desc
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            <![CDATA[ LIMIT #{beginnumber},#{endnumber}]]>
+        </if>
+    </select>
+
+    <select id="getSubTraderFollowerEarningsCount" resultType="int">
+        SELECT
+        count(0)
+        FROM
+        (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (2, 3)
+        <if test="begintime !=null and begintime != '' and endtime !=null and endtime != ''">
+            AND createtime BETWEEN #{begintime} and #{endtime}
+        </if>
+        GROUP BY
+        userid
+        ORDER BY
+        income DESC
+        ) AS a
+        INNER JOIN (
+        SELECT
+        *
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) AS b ON a.userid = b.pid
+        LEFT JOIN (
+        SELECT
+        count(0) AS 'num',
+        sub_user_id
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        GROUP BY
+        sub_user_id
+        ) AS c ON c.sub_user_id = a.userid
+        LEFT JOIN (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (2)
+        GROUP BY
+        userid
+        ) AS d ON d.userid = a.userid
+        LEFT JOIN (
+        SELECT
+        sum(income) AS 'income',
+        userid
+        FROM
+        sub_detailed
+        WHERE
+        state IN (3)
+        GROUP BY
+        userid
+        ) AS e ON e.userid = a.userid
+    </select>
+    <!--根据用户id和类型获取用户交易记录-->
+    <select id="getUserPayRecordByType" resultType="HashMap">
+        SELECT
+        a.pid AS pid,
+        a.surplus AS surplus,
+        a.income AS income,
+        a.loss AS loss,
+        a.state AS state,
+        DATE_FORMAT(
+        a.createtime,
+        '%Y-%m-%d %H:%i:%s'
+        ) AS createtime,
+        a.trade AS trade,
+        a.pay_userid,
+        a.orderid,
+        a.userid,
+        b.nickname AS pay_nickname,
+        c.nickname,
+        d.purchase,
+        d.rise_fall
+        FROM
+        (
+        SELECT
+        *
+        FROM
+        sub_detailed sd
+        WHERE
+        sd.state in(${type})
+        <if test="userid!=null and userid!=''">
+            and userid=#{userid}
+        </if>
+        <if test="pay_userid!=null and pay_userid!=''">
+            and pay_userid=#{pay_userid}
+        </if>
+        ) AS a
+        LEFT JOIN (
+        SELECT
+        pid,
+        nickname
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) AS b ON a.pay_userid = b.pid
+        LEFT JOIN (
+        SELECT
+        pid,
+        nickname
+        FROM
+        sub_user
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) AS c ON a.userid = c.pid
+        left join(select * from sub_order where state=0) as d on d.orderid=a.orderid
+        ORDER BY
+        a.createtime DESC
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            <![CDATA[ LIMIT #{beginnumber},#{endnumber}]]>
+        </if>
+    </select>
+
+    <!--根据类型查询交易员收入-->
+    <select id="getTraderEarningsByType" resultType="HashMap">
+        SELECT userid,SUM(income) AS earnings FROM sub_detailed
+        WHERE userid=#{userid} AND `state` =#{type}
+    </select>
+    <!--根据用户id和类型获取用户交易记录条数-->
+    <select id="getUserPayRecordByTypeCount" resultType="int">
+        SELECT COUNT(0) FROM sub_detailed sd
+        WHERE sd.state in(${type})
+        <if test="userid!=null and userid!=''">
+            and sd.userid=#{userid}
+        </if>
+        <if test="pay_userid!=null and pay_userid!=''">
+            and sd.pay_userid=#{pay_userid}
+        </if>
+        ORDER BY sd.createtime DESC
+    </select>
+    <!--根据交易类型查询交易员收入-->
+    <select id="getTradeEarningsByUserIdType" resultType="HashMap">
+        SELECT ste.earnings AS earnings ,ste.type AS `type`,so.orderid AS order_id,so.pid AS orderid,so.purchase AS
+        purchase,so.rise_fall AS rise_fall,so.income AS income,so.range AS `range`,
+        so.trade AS trade , so.surplus AS surplus,su.nickname AS nickname
+        FROM sub_trader_earnings ste
+        LEFT JOIN sub_order so ON ste.sub_orderid = so.pid
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        WHERE ste.sub_userid=#{userid}
+        <if test="type!=0 ">
+            AND ste.type=#{type}
+        </if>
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            <![CDATA[ LIMIT #{beginnumber},#{endnumber}]]>
+        </if>
+    </select>
+    <!--根据交易类型查询交易员收入条数-->
+    <select id="getTradeEarningsByUserIdTypeCount" resultType="int">
+        SELECT COUNT(0) FROM sub_trader_earnings ste
+        LEFT JOIN sub_order so ON ste.sub_orderid = so.pid
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        WHERE ste.sub_userid=#{userid}
+        <if test="type !=0 ">
+            AND ste.type=#{type}
+        </if>
+    </select>
+    <!--添加新的交易员收益-->
+    <insert id="addTradeEarnings">
+        INSERT INTO sub_trader_earnings (pid,sub_userid,earnings,createtime,`type`,sub_orderid,pay_userid,surplus)VALUES
+        (#{pid},#{userid},#{money},now(),#{type},#{orderid},#{pay_userid},(select surplus from sub_money where
+        pid=#{pay_userid}))
+    </insert>
+
+    <select id="SubDetailedShou" resultType="map">
+        SELECT
+        DATE_FORMAT(
+        createtime,
+        '%Y-%m-%d'
+        ) AS date,
+        DATE_FORMAT(
+        createtime,
+        '%H:%i:%s'
+        ) AS time,
+        surplus,userid,income,loss,pay_surplus,pay_userid,state,orderid
+        FROM
+        sub_detailed
+        WHERE
+        (
+        state IN (3, 7, 9)
+        AND userid = #{userid}
+        )
+        OR (
+        state IN (3, 9)
+        AND pay_userid = #{userid}
+        )
+        ORDER by createtime DESC
+        limit #{page},#{num}
+    </select>
+
+    <select id="SubDetailedShouCount" resultType="int">
+        SELECT
+        count(0)
+        FROM
+        sub_detailed
+        WHERE
+        (
+        state IN (3, 7, 9)
+        AND userid = #{userid}
+        )
+        OR (
+        state IN (3, 9)
+        AND pay_userid = #{userid}
+        )
+        ORDER by createtime DESC
+
+    </select>
+</mapper>

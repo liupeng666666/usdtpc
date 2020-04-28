@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.WebIM.Dao.SubFriendDao">
+    <select id="SubFriend" resultType="map">
+        SELECT
+        *
+        FROM
+        (
+        SELECT
+        sub_user_id
+        FROM
+        sub_friend
+        WHERE
+        userid = #{userid}
+        ) AS a
+        LEFT JOIN (
+        SELECT
+        nickname,
+        img,
+        pid
+        FROM
+        sub_user
+        WHERE
+        isdel = 0
+        AND state = 0
+        ) AS b ON a.sub_user_id = b.pid ORDER BY nickname ASC
+    </select>
+    <insert id="SubFriendInsert">
+        insert into sub_friend (pid,userid,sub_user_id,expire)
+        VALUES (UUID(),#{userid},#{sub_user_id},#{expire})
+    </insert>
+    <delete id="delFriend">
+        DELETE FROM sub_friend where userid=#{roomid} and sub_user_id = #{userid}
+    </delete>
+
+    <select id="searchFriends" resultType="HashMap">
+        <![CDATA[
+          SELECT img,nickname,pid,'chat' AS `type` FROM sub_user su WHERE (su.nickname LIKE CONCAT(CONCAT('%',#{name}),'%') OR su.phone LIKE CONCAT(CONCAT('%',#{name}),'%')) AND isdel = 0 AND state = 0 AND pid <> #{userid}
+          AND pid NOT IN (SELECT userid FROM sub_friend WHERE sub_user_id =#{userid})
+        ]]>
+    </select>
+    <select id="searchGroup" resultType="HashMap">
+        SELECT pid,img,`name` FROM sub_group sg WHERE (sg.pid LIKE CONCAT(CONCAT('%',#{name}),'%') OR sg.name LIKE
+        CONCAT(CONCAT('%',#{name}),'%')) AND isdel = 0 AND state = 0 AND audit =1
+        AND sg.pid NOT IN (SELECT userid FROM sub_friend WHERE sub_user_id =#{userid})
+    </select>
+    <select id="getFriendsByGroupId" resultType="HashMap">
+        SELECT pid,img,nickname,nickname FROM sub_user su
+        WHERE su.pid IN (SELECT sub_user_id FROM sub_friend sf WHERE sf.userid=#{userid} AND sf.sub_user_id NOT IN
+        (SELECT sub_user_id FROM sub_friend WHERE userid = #{roomid}))
+
+    </select>
+    <update id="groupNumDel">
+        UPDATE sub_group set num = num-1 where pid = #{roomid}
+    </update>
+</mapper>

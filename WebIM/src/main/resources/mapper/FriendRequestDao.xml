@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.WebIM.Dao.FriendRequestDao">
+    <insert id="addFriendRequest">
+        INSERT INTO friend_request (pid,proposer,userid,createdatetime,content,`type`)VALUES
+        (#{pid},#{proposer},#{userid},now(),#{content},#{type})
+    </insert>
+    <select id="getUntreatedFriendRequest" resultType="HashMap">
+        SELECT fr.pid AS pid,fr.proposer AS proposer,fr.content,fr.createdatetime,su.nickname AS nickname,su.img AS img
+        FROM friend_request fr
+        LEFT JOIN sub_user su ON fr.proposer=su.pid
+        WHERE fr.userid=#{userid} and is_check='0' GROUP BY proposer
+    </select>
+    <update id="changeFriendRequestState">
+        UPDATE friend_request SET is_check = 1 WHERE proposer=#{pid} and userid =#{userid}
+    </update>
+    <select id="getRelationCount" resultType="int">
+        SELECT COUNT(0) FROM sub_friend WHERE userid=#{roomid} AND sub_user_id=#{userid}
+    </select>
+    <insert id="addSubFriend">
+        insert into sub_friend (pid,userid,sub_user_id,expire)
+        VALUES (UUID(),#{userid},#{sub_user_id},#{expire})
+
+    </insert>
+</mapper>

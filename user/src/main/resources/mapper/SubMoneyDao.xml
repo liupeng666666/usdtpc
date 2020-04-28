@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubMoneyDao">
+    <!--修改用户余额-->
+    <update id="changeSurplus">
+        UPDATE sub_money SET surplus = surplus+#{surplus} where pid=#{userid}
+    </update>
+    <update id="changeSurplusAndTotal">
+        UPDATE sub_money SET surplus = surplus+#{money},total = total+#{money} where pid=#{userid}
+    </update>
+    <insert id="addMoney">
+        INSERT INTO sub_money (pid,createtime,total,surplus) VALUES(#{pid},now(),#{money},#{money})
+    </insert>
+    <select id="getMoneyInfo" resultType="HashMap">
+        select * FROM sub_money where pid =#{userid}
+    </select>
+    <insert id="addSubDetailed">
+        INSERT INTO sub_detailed (pid,surplus,income,loss,state,createtime,trade,userid,orderid,pay_userid
+        <if test="pay_userid!=null and pay_userid!=''">
+            ,pay_surplus
+        </if>
+        )
+        VALUES (#{pid},#{surplus},#{income},#{loss},#{state},now(),#{trade},#{userid},#{orderid},#{pay_userid}
+        <if test="pay_userid!=null and pay_userid!=''">
+            ,(select surplus from sub_money where pid=#{pay_userid})
+        </if>
+        )
+    </insert>
+
+    <update id="changeSurplusBru">
+        UPDATE sub_money SET bur_money = bur_money+#{surplus} where pid=#{userid}
+    </update>
+</mapper>

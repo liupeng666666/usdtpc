@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubOrderDao">
+    <!--根据时间段查询收益最大排行榜-->
+    <select id="getProfitTop" resultType="HashMap">
+        SELECT IFNULL(smg.money_income,'0') as 'money_income',b.allincome AS allincome, COUNT(sf.sub_user_id) AS num ,
+        sf.pid AS fansid, a.* FROM (
+        SELECT sg.type AS startnum,so.beginprice AS beginprice , so.endprice AS endprice ,GROUP_CONCAT(so.createtime) AS
+        intime,GROUP_CONCAT(so.income) AS incomels,so.pid AS pid ,su.img as img, COUNT(so.userid) AS
+        dealnum,SUM(income)AS income,SUM(so.range) AS `range` ,SUM(so.purchase) AS purchase,SUM(so.trade)AS trade,
+        userid,su.nickname,su.follow_num,su.fans_num,IFNULL(sum(so.income/so.purchase),0)*100 as 'er' FROM sub_order so
+        LEFT JOIN sub_user su ON so.userid = su.pid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE so.state=0 and so.style=1 and su.trader = 1 AND su.isdel = 0 AND su.state = 0
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ and so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ and so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY so.userid) AS a
+        LEFT JOIN sub_fans sf ON sf.sub_user_id = a.userid and sf.fans_sub_user_id=#{userid}
+        left join (select (income+loss) as 'money_income',pid from sub_money where state=0 and isdel=0) as smg on
+        a.userid=smg.pid
+        LEFT JOIN (SELECT so.userid,SUM(income)allincome FROM sub_order so WHERE so.state=0 GROUP BY so.userid) AS b ON
+        a.userid = b.userid
+        GROUP BY a.pid ORDER BY a.income DESC
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            <![CDATA[ LIMIT #{beginnumber},#{endnumber}]]>
+        </if>
+    </select>
+    <!--根据时间段查询最大排行榜条数-->
+    <select id="getProfitTopCount" resultType="int">
+        SELECT COUNT(0) FROM (
+        SELECT so.beginprice AS beginprice , so.endprice AS endprice ,GROUP_CONCAT(so.createtime) AS
+        intime,GROUP_CONCAT(so.income) AS incomels,so.pid AS pid ,su.img as img, COUNT(so.userid) AS
+        dealnum,SUM(income)AS income,SUM(so.range) AS `range` ,SUM(so.purchase) AS purchase,SUM(so.trade)AS trade,
+        userid,su.nickname,su.fans_num FROM sub_order so
+        LEFT JOIN sub_user su ON so.userid = su.pid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE so.state=0 and so.style=1 and su.trader = 1 AND su.isdel = 0 AND su.state = 0
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ and so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ and so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY so.userid) AS a
+        LEFT JOIN sub_fans sf ON sf.sub_user_id = a.userid and sf.fans_sub_user_id=#{userid}
+        LEFT JOIN (SELECT so.userid,SUM(income)allincome FROM sub_order so WHERE income IS NOT NULL GROUP BY so.userid)
+        AS b ON a.userid = b.userid
+
+    </select>
+    <!--分页查询最近的交易订单-->
+    <select id="getSubOrderSortDesc" resultType="HashMap">
+        SELECT sm.style AS style ,so.orderid AS order_id ,so.surplus AS surplus, sm.minute AS `minute`, sg.type AS
+        startnum ,so.beginprice AS beginprice ,
+        so.endprice AS endprice ,so.pid AS orderid,so.purchase AS purchase,so.`range` AS
+        `range`,DATE_FORMAT(so.createtime,"%Y/%m/%d %H:%i:%S") AS createtime,so.income AS income,
+        so.trade AS trade, so.rise_fall AS rise_fall,sc.name AS currencyname ,sc.y_name as y_name,su.nickname AS
+        nickname ,su.img AS img ,
+        sm.style AS style,su.pid AS userid FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sd.sys_currency_id = sc.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE so.income IS NOT NULL AND so.income > 0 ORDER BY createtime DESC
+        <if test="beginnumber!=null   and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+    <!--查询最近的交易订单条数-->
+    <select id="getSubOrderSortDescCount" resultType="int">
+        SELECT COUNT(0) as total FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sd.sys_currency_id = sc.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE so.income IS NOT NULL AND so.income > 0
+    </select>
+    <!--插入一条新的订单-->
+    <insert id="addSubOrder">
+        INSERT INTO sub_order
+        (pid,sys_disc_id,purchase,`range`,createtime,state,style,rise_fall,userid,follower,isfollow,beginprice)
+        VALUES
+        (#{pid},#{sys_disc_id},#{purchase},#{range},now(),0,#{style},#{rise_fall},#{follower},#{isfollow},#{beginprice})
+    </insert>
+    <!--查询该用户下所有可跟随订单 试试-->
+    <select id="getFollowOrder" resultType="HashMap">
+        SELECT so.charge AS charge,smo.surplus AS surplus, COUNT(soc.pid) AS num,DATE_FORMAT( so.createtime,'%Y-%m-%d
+        %h:%i:%s') AS createtime,sob.pid AS isgm,DATE_FORMAT( sm.createtime,'%Y-%m-%d %h:%i:%s') AS smtime,sm.end_minute
+        AS end_minute, so.rise_fall AS rise_fall,so.orderid AS orderid,so.pid AS pid,sc.name AS currencyname,sc.y_name
+        AS y_name,so.beginprice AS beginprice,so.purchase AS purchase,so.icrease as icrease,so.style as
+        'style',sofans.fans_num as 'fans_num' FROM sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_currency sc ON sc.pid = sd.sys_currency_id
+        LEFT JOIN sub_trader_earnings sob ON sob.sub_userid=so.userid AND sob.pay_userid=#{follower} and
+        sob.sub_orderid=so.orderid
+        LEFT JOIN (select count(0) as 'fans_num',sub_orderid from sub_trader_earnings GROUP by sub_orderid) as sofans on
+        so.orderid=sofans.sub_orderid
+        LEFT JOIN sub_order soc ON soc.follower=so.userid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        LEFT JOIN sub_money smo ON smo.pid=#{follower}
+        WHERE so.isfollow = 0 AND so.state=0 and so.style=0 AND so.userid=#{userid} GROUP BY so.orderid desc
+    </select>
+    <!--根据用户id查询用户订单币种统计-->
+    <select id="getOrderByCurrency" resultType="HashMap">
+        SELECT COUNT(a.pid) AS scnum , sc.pid,sc.name,sc.y_name FROM sys_currency sc
+        LEFT JOIN (SELECT sc.pid,sc.name,sc.y_name FROM sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_currency sc ON sc.pid = sd.sys_currency_id
+        WHERE so.userid=#{userid}and so.style='1'
+        ) AS a ON a.pid = sc.pid
+        GROUP BY sc.pid
+
+
+        <!--SELECT COUNT(sc.pid) AS scnum , sc.pid,sc.name,sc.y_name FROM sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_currency sc ON sc.pid = sd.sys_currency_id
+        WHERE so.userid=#{userid} AND so.income IS NOT NULL AND so.endprice IS NOT NULL
+        GROUP BY sc.pid-->
+    </select>
+    <!--根据用户id分盘查询订单信息-->
+    <select id="getOrderByTradeSector" resultType="HashMap">
+        SELECT DATE_FORMAT(so.createtime, '%h:%i:%s %d-%m-%Y') AS createtime,DATE_FORMAT(so.createtime, '%Y-%m-%d
+        %h:%i:%s') AS buytime,
+        so.orderid AS orderid,so.icrease AS icrease,
+        so.pid AS pid ,sc.name AS currencyname,sc.y_name AS y_name,so.beginprice AS beginprice,
+        so.purchase AS purchase,so.rise_fall AS rise_fall,so.income,sm.minute,so.`range` as 'range', so.style
+        FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sc.pid = sd.sys_currency_id
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE sm.isdel = 0 AND sc.isdel=0
+        <if test="state == null or state ==''">
+            AND so.style='1'
+        </if>
+        AND sm.style = #{style} AND so.userid = #{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        ORDER BY so.orderid DESC
+        <if test="beginnumber!=null   and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+
+    <select id="getOrderByTradeSectorCnt" resultType="int">
+        SELECT count(1) FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sc.pid = sd.sys_currency_id
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE sm.isdel = 0 AND sc.isdel=0
+        <if test="state == null or state ==''">
+            AND so.style='1'
+        </if>
+        AND sm.style = #{style} AND so.userid = #{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+    </select>
+
+    <!--获取收益率统-->
+    <select id="getRateOfReturnByTime" resultType="HashMap">
+        SELECT
+        IFNULL(b.rise,0) AS rise,
+        IFNULL(c.fall,0) AS fall,
+        a.income AS income,
+        a.orderday AS orderday,
+        a.purchase AS purchase,
+        IFNULL(b.rincome,0) AS rincome,
+        IFNULL(c.fincome,0)AS fincome,
+        IFNULL(a.ysl,0) as 'ysl'
+        FROM
+        (
+        SELECT
+        so.userid AS userid,
+        DATE_FORMAT(so.createtime, '%Y/%m/%d') AS orderday,
+        SUM(so.income) AS income,
+        SUM(so.purchase) AS purchase,
+        SUM(so.income/so.purchase) as 'ysl'
+        FROM
+        sub_order so WHERE so.userid=#{userid} AND so.income IS NOT NULL AND so.endprice IS NOT NULL
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday) AS a LEFT JOIN
+        (SELECT DATE_FORMAT(so.createtime,'%Y/%m/%d') AS orderday,COUNT(so.rise_fall)AS rise,SUM(so.income) AS rincome
+        FROM sub_order so
+        WHERE so.userid=#{userid} AND so.style='1' AND so.rise_fall=0
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday) AS b ON a.orderday=b.orderday
+        LEFT JOIN
+        (SELECT DATE_FORMAT(so.createtime,'%Y/%m/%d') AS orderday,COUNT(so.rise_fall)AS fall,SUM(so.income)AS fincome
+        FROM sub_order so
+        WHERE so.userid=#{userid} AND so.style='1' AND so.rise_fall=1
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday) AS c ON a.orderday=c.orderday
+    </select>
+    <!--获取收益金额统计-->
+    <select id="getIncomeAmountByTime" resultType="HashMap">
+        SELECT
+        IFNULL(b.aincome,0) AS aincome,
+        IFNULL(c.bincome,0) AS bincome,
+        a.orderday,
+        a.income
+        FROM
+        (
+        SELECT
+        DATE_FORMAT(so.createtime, '%Y/%m/%d') AS orderday,
+        so.userid,
+        SUM(so.income) AS income
+        FROM
+        sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.style='1' AND so.userid=#{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday) AS a
+        LEFT JOIN
+        (SELECT DATE_FORMAT(so.createtime,'%Y/%m/%d') AS orderday,so.userid,SUM(so.income) as aincome FROM sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.style='1' AND sm.style='0'AND so.userid=#{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday)AS b ON a.orderday = b.orderday
+        LEFT JOIN
+        (SELECT DATE_FORMAT(so.createtime,'%Y/%m/%d') AS orderday,so.userid,SUM(so.income) as bincome FROM sub_order so
+        LEFT JOIN sys_disc sd ON sd.pid = so.sys_disc_id
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.style='1' AND sm.style='1'AND so.userid=#{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND so.createtime >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND so.createtime <= #{endtime}]]>
+        </if>
+        GROUP BY orderday)AS c ON a.orderday = c.orderday
+    </select>
+    <!--净值余额-->
+    <select id="getNetValueBalanceById" resultType="HashMap">
+        SELECT DATE_FORMAT(sms.date,'%Y/%m/%d') AS `datetime`,surplus,income,loss,rise,fall,trade FROM
+        sub_money_statistics sms
+        WHERE sms.userid=#{userid}
+        <if test="begintime !=null and begintime != ''">
+            <![CDATA[ AND sms.date >= #{begintime}]]>
+        </if>
+        <if test="endtime !=null and endtime != ''">
+            <![CDATA[ AND sms.date <= #{endtime}]]>
+        </if>
+    </select>
+    <!--根据用户分页查询最近的下单记录-->
+    <select id="getSubOrderByUserPage" resultType="HashMap">
+        SELECT DATE_FORMAT(so.createtime,'%y/%m/%d %H:%i:%s') AS orderday,sm.style AS style ,so.orderid AS order_id
+        ,so.surplus AS surplus, sm.minute AS `minute`, sg.type AS startnum ,so.beginprice AS beginprice ,
+        so.endprice AS endprice ,so.pid AS orderid,so.purchase AS purchase,so.`range` AS `range`,so.createtime AS
+        createtime,so.income AS income,
+        so.trade AS trade, so.rise_fall AS rise_fall,sc.name AS currencyname ,sc.y_name as y_name,su.nickname AS
+        nickname ,su.img AS img ,so.icrease as 'icrease',so.style as 'order_style',so.q_surplus as 'q_surplus',
+        sm.style AS style FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sd.sys_currency_id = sc.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE
+        so.userid = #{userid} and so.state=0
+        <if test="type!=null and type!=''">
+            and so.`style`=#{type}
+        </if>
+        ORDER BY createtime DESC
+        <if test="beginnumber!=null   and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+    <!--根据用户分页查询最近的下单记录条数-->
+    <select id="getSubOrderByUserPageCount" resultType="int">
+        SELECT COUNT(0) FROM sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_currency sc ON sd.sys_currency_id = sc.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        LEFT JOIN sub_user su ON su.pid = so.userid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        WHERE so.userid = #{userid} and so.state=0
+        <if test="type!=null and type!=''">
+            and so.`style`=#{type}
+        </if>
+    </select>
+</mapper>

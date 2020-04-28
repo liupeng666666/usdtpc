@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SysVersionDao">
+    <select id="getSysVersion" resultType="HashMap">
+        select pid,memo,version,savepath,`type`,DATE_FORMAT(`time`,'%Y-%m-%d') AS `time`,style from sys_version as a
+        where `type`=#{type} ORDER by a.`time` desc limit 1
+    </select>
+</mapper>

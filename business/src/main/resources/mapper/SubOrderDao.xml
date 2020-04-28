@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.business.Dao.BusSubOrderDao">
+    <select id="SubOrderSelect" resultType="map">
+        SELECT
+        IFNULL(sum(purchase), 0) AS 'purchase'
+        FROM
+        sub_order
+        WHERE
+        sys_disc_id = #{sys_disc_id}
+        GROUP BY
+        sys_disc_id
+    </select>
+
+    <select id="SubOrderUserSelect" resultType="map">
+        SELECT
+        DATE_FORMAT(a.createtime,"%Y/%m/%d %H:%i:%S") as 'createtime',
+        DATE_FORMAT(a.updatetime,"%Y/%m/%d %H:%i:%S") as 'updatetime',
+        a.*
+        FROM
+        sub_order as a
+        <where>
+            a.state=0
+            <if test="userid!=null and userid!=''">
+                and a.userid=#{userid}
+            </if>
+            <if test="rise_fall!=null and rise_fall!=''">
+                and a.rise_fall=#{rise_fall}
+            </if>
+            <if test="sys_disc_id!=null and sys_disc_id!=''">
+                and a.sys_disc_id=#{sys_disc_id}
+            </if>
+            <if test="minute_style!=null and minute_style!=''">
+                and a.minute_style=#{minute_style}
+            </if>
+            <if test="sys_currency_id!=null and sys_currency_id!=''">
+                and a.currency=#{sys_currency_id}
+            </if>
+            <if test="datetime!=null and datetime!=''">
+                and date_format(a.createtime, '%Y-%c-%d')=date_format(#{datetime}, '%Y-%c-%d')
+            </if>
+        </where>
+        order by a.orderid DESC
+    </select>
+    <insert id="SubOrderAdd">
+        insert into sub_order(
+        pid,
+        sys_disc_id,
+        purchase,
+        `range`,
+        createtime,
+        updatetime,
+        rise_fall,
+        userid,
+        q_surplus,
+        trade,
+        <if test="icrease!=null and icrease!=''">
+            icrease,
+        </if>
+        beginprice,currency,`minute`,phase,minute_style
+        )
+        values(
+        UUID(),
+        #{sys_disc_id},
+        #{purchase},
+        #{range},
+        now(),
+        now(),
+        #{rise_fall},
+        #{userid},
+        #{q_surplus},
+        #{trade},
+        <if test="icrease!=null and icrease!=''">
+            #{icrease},
+        </if>
+        #{beginprice},#{currency},#{minute},#{phase},#{minute_style}
+        )
+
+    </insert>
+    <update id="SubOrderUpdate">
+        update sub_order
+        <set>
+            charge=#{charge},
+            isfollow=#{isfollow},
+        </set>
+        <where>
+            pid=#{pid}
+        </where>
+
+    </update>
+    <select id="SubOrderDatetime" resultType="map">
+        select DATE_FORMAT(createtime,"%Y-%m-%d") as 'datetime' from sub_order where userid=#{pid} GROUP BY
+        DATE_FORMAT(createtime,"%y-%m-%d") order by DATE_FORMAT(createtime,"%y-%m-%d") desc
+    </select>
+    <select id="SubOrderBQUSelect" resultType="map">
+        SELECT
+        b.orderid,
+        b.createtime,
+        c.phase,
+        d.y_name,
+        f.`close`,
+        b.beginprice,
+        b.isfollow,
+        b.pid,
+        b.purchase
+        FROM
+        (
+        SELECT
+        beginprice,
+        createtime,
+        sys_disc_id,
+        orderid,
+        isfollow,
+        pid,
+        purchase
+        FROM
+        sub_order
+        WHERE
+        state = 0
+        AND style = 0
+        and userid=#{userid}
+        order by orderid DESC
+        ) AS b
+        INNER JOIN (
+        SELECT
+        phase,
+        pid,
+        sys_currency_id,
+        sys_minute_id
+        FROM
+        sys_disc
+        WHERE
+        state = 0
+        AND isstart = 0
+        ) AS c ON c.pid = b.sys_disc_id
+        INNER JOIN (
+        SELECT
+        y_name,
+        pid
+        FROM
+        sys_minute
+        WHERE
+        state = 0
+        AND isdel = 0
+        AND style = 1
+        ) AS a ON a.pid = c.sys_minute_id
+        INNER JOIN (
+        SELECT
+        y_name,
+        pid
+        FROM
+        sys_currency
+        WHERE
+        state = 0
+        AND isdel = 0
+        ) AS d ON d.pid = c.sys_currency_id
+        INNER JOIN (
+        SELECT
+        a1.createtime,
+        a1.sys_currency_id,
+        a2.`close`
+        FROM
+        (
+        SELECT
+        sys_currency_id,
+        max(createtime) AS 'createtime'
+        FROM
+        sys_kline
+        GROUP BY
+        sys_currency_id
+        ) AS a1
+        INNER JOIN sys_kline AS a2 ON a1.sys_currency_id = a2.sys_currency_id
+        AND a1.createtime = a2.createtime
+        ) AS f ON f.sys_currency_id = c.sys_currency_id
+    </select>
+</mapper>

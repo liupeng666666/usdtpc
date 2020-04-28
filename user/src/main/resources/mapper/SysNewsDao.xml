@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SysNewsDao">
+    <!--根据分类查询新闻-->
+    <select id="getSysNewsByClass" resultType="HashMap">
+        SELECT DATE_FORMAT(sn.createtime,'%Y-%m-%d') AS createtime ,sn.amount AS amount,su.nickname AS nickname ,su.img
+        AS userimg ,sn.pid AS pid,sn.title AS title,sn.img AS img,sn.y_title AS y_title, sn.y_message AS
+        y_message,sn.synopsis AS synopsis , sn.y_synopsis AS y_synopsis, sn.message AS message,sn.sys_class_id AS
+        sys_class_id,sn.state AS state, sn.isdel AS isdel FROM sys_news sn
+        LEFT JOIN sys_user su ON su.userid = sn.createuserid
+        WHERE sn.sys_class_id = #{sys_class_id} and sn.state =0 and sn.isdel = 0 ORDER BY sn.top DESC ,sn.createtime
+        DESC
+        <if test="beginnumber!=null  and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+    <!--根据分类查询新闻共多少条-->
+    <select id="getSysNewsByClassCount" resultType="int">
+        SELECT COUNT(0) FROM sys_news sn
+        LEFT JOIN sys_user su ON su.userid = sn.createuserid
+        WHERE sn.sys_class_id = #{sys_class_id} and sn.state =0 and sn.isdel = 0
+
+    </select>
+    <!--查询24小时快讯-->
+    <select id="getSysNewsFlash" resultType="HashMap">
+        SELECT DATE_FORMAT(sn.createtime,'%Y-%m-%d') AS createtime ,DATE_FORMAT(sn.createtime,'%H:%i:%s') AS `time`
+        ,sn.amount AS amount, su.img AS userimg , su.nickname AS nickname,su.userid AS userid,sn.pid AS pid,sn.img AS
+        img ,sn.title AS title,sn.message AS message,sn.y_title AS y_title ,sn.y_message AS y_message,sn.synopsis AS
+        synopsis , sn.y_synopsis AS y_synopsis FROM sys_news sn
+        LEFT JOIN sys_class sc ON sn.sys_class_id = sc.pid
+        LEFT JOIN sys_user su ON su.userid = sn.createuserid
+        WHERE sc.style = 3 AND sc.state=0 AND sc.isdel = 0 AND sn.isdel=0 AND sn.state=0 ORDER BY sn.top DESC
+        ,sn.createtime DESC
+        <if test="beginnumber!=null and endnumber!=null and endnumber!=0">
+            LIMIT #{beginnumber},#{endnumber}
+        </if>
+    </select>
+    <!--查询24小时快讯共多少条-->
+    <select id="getSysNewsFlashCount" resultType="int">
+        SELECT COUNT(0) FROM sys_news sn
+        LEFT JOIN sys_class sc ON sn.sys_class_id = sc.pid
+        LEFT JOIN sys_user su ON su.userid = sn.createuserid
+        WHERE sc.style = 3 AND sc.state=0 AND sc.isdel = 0 AND sn.isdel=0 AND sn.state=0
+    </select>
+
+    <select id="getNewsMessage" resultType="map">
+        SELECT
+        a.*, b.nickname,
+        b.img as 'simg'
+        FROM
+        (
+        SELECT
+        *
+        FROM
+        sys_news
+        WHERE
+        pid = #{pid}
+        AND state = 0
+        AND isdel = 0
+        limit 1
+        ) AS a
+        LEFT JOIN sys_user AS b ON a.createuserid = b.userid
+    </select>
+    <update id="getNewsUpdate">
+        update sys_news
+        set amount=amount+1
+        where pid=#{pid}
+    </update>
+</mapper>

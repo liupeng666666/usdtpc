@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SysDiscDao">
+    <!--根据交易区和币种获取盘口信息-->
+    <select id="getDiscInfoByDist" resultType="HashMap">
+        SELECT sd.pid AS pid, sd.sys_minute_id AS sys_minute_id,`minute` FROM sys_disc sd
+        LEFT JOIN sys_minute sm ON sd.sys_minute_id = sm.pid
+        WHERE sd.sys_currency_id= #{sys_currency_id} AND sd.isdel =0 AND sd.state =0 AND sm.isdel=0 AND sm.state =0 AND
+        sm.style=#{style} ORDER BY sm.minute ASC LIMIT 1
+    </select>
+</mapper>

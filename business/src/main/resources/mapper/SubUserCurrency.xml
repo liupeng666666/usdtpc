@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.business.Dao.SubUserCurrencyDao">
+    <select id="SubUserCurrencySelect" resultType="map">
+        SELECT
+        a.*, b.*, d.*, (
+        IFNULL(d.`close`, 1) / IFNULL(c.`close`, 1) - 1
+        ) AS 'bfb'
+        FROM
+        (
+        SELECT
+        *
+        FROM
+        sys_currency
+        WHERE
+        isdel = 0
+        AND state = 0
+        order by sort ASC
+        ) AS a
+        LEFT JOIN (
+        SELECT
+        count(0) AS 'num',
+        currencyid
+        FROM
+        sub_user_currency
+        WHERE
+        userid = #{userid}
+        GROUP BY
+        currencyid
+        ) AS b ON b.currencyid = a.pid
+        LEFT JOIN (
+        select * from (SELECT
+        sys_currency_id,
+        `close`
+        FROM
+        sys_kline
+        WHERE
+        DATE_FORMAT(
+        createtime,
+        "%Y-%m-%d %H:%i"
+        ) BETWEEN DATE_FORMAT(
+        DATE_SUB(NOW(), INTERVAL 2 DAY),
+        '%Y-%m-%d %H:%i'
+        ) and DATE_FORMAT(
+        DATE_SUB(NOW(), INTERVAL 1 DAY),
+        '%Y-%m-%d %H:%i'
+        )
+        ORDER BY createtime desc) as c
+        GROUP BY c.sys_currency_id
+        ) AS c ON c.sys_currency_id = a.pid
+        LEFT JOIN (
+        select * from (SELECT
+        sys_currency_id,
+        `close`,
+        `open`,
+        low,
+        high
+        FROM
+        sys_kline
+        WHERE
+        DATE_FORMAT(
+        createtime,
+        "%Y-%m-%d %H:%i"
+        ) BETWEEN DATE_FORMAT(
+        DATE_SUB(NOW(), INTERVAL 5 MINUTE),
+        '%Y-%m-%d %H:%i'
+        ) and DATE_FORMAT(
+        now(),
+        '%Y-%m-%d %H:%i'
+        )
+        ORDER BY createtime desc) as c
+        GROUP BY c.sys_currency_id
+        ) AS d ON d.sys_currency_id = a.pid
+    </select>
+    <delete id="SubUserCurrencyDel">
+        DELETE from sub_user_currency
+        where userid=#{userid} and currencyid=#{currencyid}
+    </delete>
+    <insert id="SubUserCurrencyInsert">
+        insert into sub_user_currency(pid,userid,currencyid) values(
+        uuid(),#{userid},#{currencyid}
+        )
+    </insert>
+</mapper>

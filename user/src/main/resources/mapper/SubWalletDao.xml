@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubWalletDao">
+    <!--查询用户钱包充值地址-->
+    <select id="getUserRechargeUrl" resultType="HashMap">
+        SELECT pid,sub_user_id,wallet FROM sub_wallet WHERE isdel = 0 AND state = 0 AND sub_user_id =#{userid}
+    </select>
+    <!--添加充值URL地址-->
+    <insert id="addUserWalletUrl">
+        INSERT INTO sub_wallet (pid,sub_user_id,wallet,createtime,state,isdel)
+        VALUES(#{pid},#{userid},#{wallet},now(),0,0)
+    </insert>
+    <!--获取提现参数-->
+    <select id="getSysWithdrawParam" resultType="HashMap">
+        SELECT * FROM sys_system limit 1;
+    </select>
+    <!--添加明细-->
+    <insert id="addSubDetailed">
+        INSERT into sub_detailed(pid,surplus,income,loss,state,createtime,trade,userid,orderid,pay_userid)
+        VALUES(#{pid},#{surplus},#{income},#{loss},#{state},now(),#{trade},#{userid},#{orderid},#{pay_userid})
+    </insert>
+</mapper>

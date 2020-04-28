@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubTeamDao">
+    <insert id="sub_team_insert">
+        INSERT into sub_team(pid,userid,sub_user_id,`level`) VALUES
+        (
+        uuid(),
+        #{userid},
+        #{sub_user_id},
+        #{level}
+        )
+    </insert>
+</mapper>

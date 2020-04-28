@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SubUserDao">
+    <!--判断用户是否存在-->
+    <select id="isSysUser" resultType="int">
+        SELECT COUNT(0) FROM sub_user su
+        <where>
+            <if test="username !=null and username!=''">
+                su.username = #{username}
+            </if>
+            <if test="phone!=null and phone!=''">
+                AND su.phone = #{phone}
+            </if>
+            <if test="email!=null and email!=''">
+                AND su.email = #{email}
+            </if>
+            <if test="pid!=null and pid!=''">
+                AND su.pid != #{pid}
+            </if>
+        </where>
+    </select>
+    <!--用户注册信息-->
+    <insert id="register">
+        INSERT INTO sub_user
+        (pid,nickname,username,`password`,phone,email,trade_password,sex,region,hobby,dabble_time,createtime,follow_num,fans_num,sys_grade_id,wallet,trader,sub_user_id,`type`,channel)
+        VALUES
+        (#{pid},#{nickname},#{username},#{password},#{phone},#{email},#{trade_password},#{sex},#{region},#{hobby},#{dabble_time},now(),0,0,#{sys_grade_id},#{wallet},#{trader},#{sub_user_id},#{regtype},#{channel})
+    </insert>
+    <!--用户进行登录-->
+    <select id="login" resultType="HashMap">
+        SELECT su.pid AS
+        pid,`img`,nickname,username,phone,email,trade_password,sex,region,hobby,dabble_time,follow_num,fans_num,sg.type
+        AS `type`,su.sys_grade_id AS sys_grade_id,wallet,trader,sub_user_id
+        ,google_secret,isgoogle,real_name,realname,sid,nationality FROM sub_user su
+        LEFT JOIN sys_grade sg ON sg.pid = su.sys_grade_id
+        where password = #{pwd}
+        <if test="type ==1 ">
+            AND username = #{username}
+        </if>
+        <if test="type ==2 ">
+            AND phone = #{username}
+        </if>
+        <if test="type ==3 ">
+            AND email = #{username}
+        </if>
+        AND su.isdel = 0 AND su.state = 0
+    </select>
+    <!--根据用户名查询用户信息 仅程序内部使用-->
+    <select id="getSubUserByUserName" resultType="HashMap">
+        SELECT su.realname AS realname,su.nationality AS
+        nationality,su.pid,`img`,nickname,username,`password`,phone,email,trade_password,sex,region,hobby,dabble_time,createtime,follow_num,fans_num,sys_grade_id,wallet,trader,sub_user_id,rolename
+        FROM sub_user su
+        LEFT JOIN sub_role sr on sr.roleid = su.roleid
+        where su.pid = #{username} and isdel = 0 and state = 0
+    </select>
+    <!--增加用户粉丝数-->
+    <update id="addFansNumber">
+        UPDATE sub_user SET fans_num = fans_num+1 WHERE pid = #{sub_user_id}
+    </update>
+    <!--增加用户关注数-->
+    <update id="addFollowNumber">
+        UPDATE sub_user SET follow_num = follow_num+1 WHERE pid = #{userid}
+    </update>
+    <!--减少用户粉丝数-->
+    <update id="delFansNumber">
+        UPDATE sub_user SET fans_num = fans_num-1 WHERE pid = #{sub_user_id}
+    </update>
+    <!--减少用户关注数-->
+    <update id="delFollowNumber">
+        UPDATE sub_user SET follow_num = follow_num-1 WHERE pid = #{userid}
+    </update>
+    <!--验证用户手机号或者邮箱是否存在-->
+    <select id="checkUserRegister" resultType="int">
+        SELECT COUNT(0) FROM sub_user
+        <if test="type == 0 ">
+            WHERE email = #{loginid}
+        </if>
+        <if test="type == 1 ">
+            WHERE phone = #{loginid}
+        </if>
+    </select>
+    <!--根据用户id查询用户详细信息-->
+    <select id="getUserInfoById" resultType="HashMap">
+        SELECT su.pid AS pid,su.img AS img ,su.nickname AS nickname,su.username AS username,su.phone AS phone, su.email
+        AS email,
+        su.sex AS sex,su.hobby AS hobby, su.dabble_time AS dabble_time,su.follow_num AS follow_num,su.fans_num AS
+        fans_num,
+        su.trader AS trader,su.real_name AS real_name,su.sid AS sid,su.s_img AS s_img ,sg.type AS startnum,su.region AS
+        region,
+        tsu.nickname AS tnickname,su.sub_user_id,sm.income AS income, sm.surplus AS surplus ,sm.total AS total, sm.trade
+        AS trade,
+        sm.loss AS loss ,sm.trade_income AS trade_income ,su.trading_strategy AS trading_strategy,COUNT(csu.pid) AS
+        cnum,su.isgoogle AS isgoogle,
+        DATE_FORMAT(su.createtime,'%Y-%m-%d %H:%i:%s') AS createtime,su.signature AS signature,sm.putinto AS putinto,
+        su.google_secret AS google_secret,su.realname AS realname,su.nationality AS nationality,su.type AS
+        regtype,su.channel AS channel,IFNULL(sudt.usdt_money,0) as 'usdt_money',IFNULL(sbru.bru_money,0) as 'bru_money',
+        su.bgimg AS bgimg,su.memo AS memo
+        FROM sub_user su
+        LEFT JOIN sub_user tsu ON tsu.pid = su.sub_user_id
+        LEFT JOIN sub_user csu ON csu.sub_user_id = su.pid
+        LEFT JOIN sys_grade sg ON su.sys_grade_id = sg.pid
+        LEFT JOIN sys_district sd ON su.region = sd.id
+        LEFT JOIN sub_money sm ON sm.pid = su.pid
+        LEFT JOIN (select sum(money) as 'usdt_money',sub_user_id from sub_usdt where style=1 and examine=1 and
+        sub_user_id=#{userid} and codeid=31 and type=0 GROUP by sub_user_id) as sudt on su.pid=sudt.sub_user_id
+        LEFT JOIN (select sum(money) as 'bru_money',sub_user_id from sub_usdt where style=1 and examine=1 and
+        sub_user_id=#{userid} and codeid=695 and type=0 GROUP by sub_user_id) as sbru on su.pid=sbru.sub_user_id
+        WHERE su.isdel =0 AND su.state = 0 AND su.pid=#{userid}
+        GROUP BY su.pid
+    </select>
+    <!--修改用户信息-->
+    <update id="changUserInfoById">
+        UPDATE sub_user AS su
+        <set>
+            <if test="img !=null and img!=''">
+                su.img = #{img},
+            </if>
+            <if test="nickname !=null and nickname!=''">
+                su.nickname = #{nickname},
+            </if>
+            <if test="username !=null and username!=''">
+                su.username = #{username},
+            </if>
+            <if test="password!=null and password!=''">
+                su.password = #{password},
+            </if>
+            <if test="phone!=null and phone!=''">
+                su.phone = #{phone},
+            </if>
+            <if test="email!=null and email!=''">
+                su.email = #{email},
+            </if>
+            <if test="trade_password!=null and trade_password!=''">
+                su.trade_password = #{trade_password},
+            </if>
+            <if test="sex!=null and sex!=''">
+                su.sex = #{sex},
+            </if>
+            <if test="region!=null and region!=''">
+                su.region = #{region},
+            </if>
+            <if test="hobby!=null and hobby!=''">
+                su.hobby = #{hobby},
+            </if>
+            <if test="dabble_time!=null and dabble_time!=''">
+                su.dabble_time = #{dabble_time},
+            </if>
+            <if test="trader!=null and trader!=''">
+                su.trader = #{trader},
+            </if>
+            <if test="real_name!=null and real_name!=''">
+                su.real_name = #{real_name},
+            </if>
+            <if test="sid!=null and sid!=''">
+                su.sid = #{sid},
+            </if>
+            <if test="s_img!=null and s_img!=''">
+                su.s_img = #{s_img},
+            </if>
+            <if test="trading_strategy!=null and trading_strategy!=''">
+                su.trading_strategy = #{trading_strategy},
+            </if>
+            <if test="signature!=null and signature!=''">
+                su.signature = #{signature},
+            </if>
+            <if test="isgoogle!=null and isgoogle!=''">
+                su.isgoogle = #{isgoogle},
+            </if>
+            <if test="google_secret!=null and google_secret!=''">
+                su.google_secret = #{google_secret},
+            </if>
+            <if test="bgimg!=null and bgimg!=''">
+                su.bgimg = #{bgimg},
+            </if>
+
+        </set>
+        WHERE su.pid = #{userid}
+    </update>
+    <!--查询用户天、周、月收益率以及排行榜-->
+    <select id="getUserEarningsTopByTime" resultType="HashMap">
+        SELECT SUM(income) AS income,SUM(purchase) AS purchase,sum(income/purchase) as 'er' FROM sub_order
+        WHERE income IS NOT NULL AND userid = #{userid}
+        <if test="type==1 ">
+            AND TO_DAYS(createtime) = TO_DAYS(NOW())
+        </if>
+        <if test="type==2 ">
+            AND createtime BETWEEN #{starttime} and now()
+        </if>
+        <if test="type==3 ">
+            AND createtime BETWEEN #{starttime} and now()
+        </if>
+    </select>
+    <!--查询当前用户的收益率排行榜排名-->
+    <select id="getUserYieldRateTop" resultType="HashMap">
+        SELECT
+        sm.pid
+        FROM
+        sub_money sm
+        LEFT JOIN sub_user su ON sm.pid = su.pid
+        WHERE
+        (sm.income +sm.loss) >= (
+        SELECT
+        (s.income +s.loss) AS num
+        FROM
+        sub_money s
+        WHERE
+        s.pid = #{userid}) AND su.isdel=0 AND su.state=0 ORDER BY (sm.income+sm.loss) DESC
+    </select>
+    <select id="getUserIncomeStatistics" resultType="HashMap">
+        SELECT a.*,CASE WHEN SUM(sob.income) IS NULL THEN 0 ELSE SUM(sob.income) END AS followincome FROM (SELECT
+        MAX(income) AS maxincome,MIN(income) AS minincome,COUNT(so.pid) AS num FROM sub_order so
+        WHERE so.userid=#{userid} AND so.income IS NOT NULL AND so.endprice IS NOT NULL) AS a
+        LEFT JOIN sub_order sob ON sob.userid=#{userid} AND sob.follower IS NOT NULL
+
+    </select>
+    <select id="getUserUsdtStatistics" resultType="HashMap">
+        SELECT su.sub_user_id,CASE WHEN amoney IS NULL THEN 0 ELSE amoney END AS amoney ,CASE WHEN bmoney IS NULL THEN 0
+        ELSE bmoney END AS bmoney FROM sub_usdt su
+        LEFT JOIN (SELECT SUM(sua.money)AS amoney,sua.sub_user_id AS sub_user_id FROM sub_usdt sua WHERE sua.style
+        in(0,1) AND sua.sub_user_id=#{userid} GROUP BY sua.sub_user_id) AS a ON su.sub_user_id = a.sub_user_id
+        LEFT JOIN (SELECT SUM(sua.money)AS bmoney,sua.sub_user_id AS sub_user_id FROM sub_usdt sua WHERE sua.style=2 AND
+        sua.sub_user_id=#{userid} GROUP BY sua.sub_user_id) AS b ON su.sub_user_id = b.sub_user_id
+        WHERE su.isdel=0 AND su.examine=1 AND su.sub_user_id = #{userid} GROUP BY su.sub_user_id
+    </select>
+    <select id="getUserTradeOrderStatistics" resultType="HashMap">
+        SELECT
+        so.num AS num,
+        IFNULL(a.anum,0) as anum,
+        a.userid AS userid,
+        IFNULL(b.bnum,0) as bnum,
+        IFNULL(c.cnum,0) as cnum
+        FROM
+        (select count(0) as 'num',userid from sub_order where state=0 and userid=#{userid}) so
+        LEFT JOIN (
+        SELECT
+        sum(so.purchase) AS anum,
+        so.userid
+        FROM
+        sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.state=0 and
+        sm.style = 0
+        and so.userid=#{userid}
+        ) a ON a.userid = so.userid
+        LEFT JOIN (
+        SELECT
+        sum(so.purchase) AS bnum,
+        so.userid
+        FROM
+        sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.state=0 and
+        sm.style = 1 and so.userid=#{userid}
+        ) b ON b.userid = so.userid
+        LEFT JOIN (
+        SELECT
+        COUNT(0) AS cnum,
+        so.userid
+        FROM
+        sub_order so
+        LEFT JOIN sys_disc sd ON so.sys_disc_id = sd.pid
+        LEFT JOIN sys_minute sm ON sm.pid = sd.sys_minute_id
+        WHERE so.state=0 and
+        <!--so.createtime BETWEEN date_sub(NOW(), interval 1 DAY) and now()-->
+        so.createtime BETWEEN DATE_FORMAT(CURDATE(),'%Y-%m-%d %H:%i:%s') and now()
+        and so.userid=#{userid}
+        ) c ON c.userid = so.userid
+
+    </select>
+    <select id="checkUserTradePassword" resultType="int">
+        SELECT COUNT(0) FROM sub_user su
+        WHERE su.pid = #{userid}
+        <if test="type==1 ">
+            AND su.password =#{trade_password}
+        </if>
+        <if test="type==2 ">
+            AND su.trade_password =#{trade_password}
+        </if>
+
+    </select>
+    <insert id="addRealnameAudit">
+        INSERT INTO sub_user_realname (pid,userid,realname,idcard,img,`process`,createtime)VALUES
+        (#{pid},#{userid},#{realname},#{idcard},#{img},0,now())
+    </insert>
+    <select id="getUserLeve1Info" resultType="HashMap">
+        SELECT pid,`name`,money,`extract`,charge FROM sys_grade WHERE `type` =1 AND isdel = 0 AND state =0
+    </select>
+    <select id="GetUserID" resultType="String">
+        select pid from sub_user where phone=#{referee} or email=#{referee} limit 1;
+    </select>
+    <update id="forgetPassword">
+        UPDATE sub_user SET `password`= #{pwd} WHERE phone=#{phone} or email=#{phone}
+    </update>
+    <select id="ReportSubUserDan" resultType="map">
+        select * from sub_user where isdel=0 and state=0 and pid=#{pid}
+    </select>
+    <update id="report_team_update">
+        update sub_user set team_num=team_num+1 where pid=#{pid}
+    </update>
+</mapper>

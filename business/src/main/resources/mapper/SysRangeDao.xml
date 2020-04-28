@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.business.Dao.SysRangeDao">
+    <select id="SysRangeSelect" resultType="map">
+        select * from sys_range where isdel=0 and state=0 and sys_minute_id=#{sys_minute_id} order by `range` ASC
+    </select>
+    <select id="SysRangeDan" resultType="map">
+        SELECT
+        a. `range` AS 'range',
+        b. `range` AS 'rise_range'
+        FROM
+        (
+        SELECT
+        *
+        FROM
+        sys_range
+        WHERE
+        isdel = 0
+        AND state = 0
+        AND pid = #{pid}
+        ) AS a
+        LEFT JOIN sys_rise_fall AS b ON a.pid = b.sys_range_id
+
+    </select>
+</mapper>

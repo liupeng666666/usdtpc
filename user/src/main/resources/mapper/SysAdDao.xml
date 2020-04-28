@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdt.user.Dao.SysAdDao">
+    <!--  根据位置查询广告信息-->
+    <select id="getAdByLocation" resultType="HashMap">
+        SELECT `pid`,`location`,`img`,`message`,`describe`,`memo` from sys_ad where isdel = 0 and state = 0 and location
+        = #{location}
+    </select>
+</mapper>

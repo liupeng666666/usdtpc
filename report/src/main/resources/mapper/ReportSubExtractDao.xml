@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.whp.usdtpc.report.Dao.ReportSubExtractDao">
+    <select id="SubExtractSelect" resultType="map">
+        select * from sub_extract_time where user_id=#{pid} ORDER BY date desc
+        limit #{page},#{num}
+    </select>
+    <select id="SubExtractCount" resultType="int">
+        select count(0) from sub_extract_time where user_id=#{pid}
+    </select>
+</mapper>
